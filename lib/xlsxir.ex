@@ -4,7 +4,6 @@ defmodule Xlsxir do
   use Application
 
   def start(_type, _args) do
-
     children = [
       %{id: Xlsxir.StateManager, start: {Xlsxir.StateManager, :start_link, []}, type: :worker}
     ]
@@ -67,7 +66,15 @@ defmodule Xlsxir do
         iex> {:ok, tid1} = Task.await(task1)
         iex> {:ok, tid2} = Task.await(task2)
         iex> Xlsxir.get_list(tid1)
-        [["string one", "string two", 10, 20, {2016, 1, 1}]]
+        [
+          [
+            %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value},
+            %{cell_value: "string two", data_type: 's', formula: nil, num_style: nil, value: '2', value_type: :value},
+            %{cell_value: 10, data_type: nil, formula: nil, num_style: nil, value: '10', value_type: :value},
+            %{cell_value: 20, data_type: nil, formula: '4*5', num_style: nil, value: '20', value_type: :value},
+            %{cell_value: {2016, 1, 1}, data_type: nil, formula: nil, num_style: 'd', value: '42370', value_type: :value}
+          ]
+        ]
         iex> Xlsxir.get_list(tid2)
         [["string one", "string two", 10, 20, {2016, 1, 1}]]
         iex> Xlsxir.close(tid1)
@@ -257,7 +264,15 @@ defmodule Xlsxir do
 
           iex> {:ok, tid} = Xlsxir.extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_list(tid)
-          [["string one", "string two", 10, 20, {2016, 1, 1}]]
+          [
+            [
+              %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value},
+              %{cell_value: "string two", data_type: 's', formula: nil, num_style: nil, value: '2', value_type: :value},
+              %{cell_value: 10, data_type: nil, formula: nil, num_style: nil, value: '10', value_type: :value},
+              %{cell_value: 20, data_type: nil, formula: '4*5', num_style: nil, value: '20', value_type: :value},
+              %{cell_value: {2016, 1, 1}, data_type: nil, formula: nil, num_style: 'd', value: '42370', value_type: :value}
+            ]
+          ]
           iex> Xlsxir.close(tid)
           :ok
 
@@ -340,7 +355,15 @@ defmodule Xlsxir do
 
           iex> {:ok, tid} = Xlsxir.multi_extract("./test/test_data/test.xlsx", 0)
           iex> mda = Xlsxir.get_mda(tid)
-          %{0 => %{0 => "string one", 1 => "string two", 2 => 10, 3 => 20, 4 => {2016,1,1}}}
+          %{
+            0 => %{
+              0 => %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value},
+              1 => %{cell_value: "string two", data_type: 's', formula: nil, num_style: nil, value: '2', value_type: :value},
+              2 => %{cell_value: 10, data_type: nil, formula: nil, num_style: nil, value: '10', value_type: :value},
+              3 => %{cell_value: 20, data_type: nil, formula: '4*5', num_style: nil, value: '20', value_type: :value},
+              4 => %{cell_value: {2016, 1, 1}, data_type: nil, formula: nil, num_style: 'd', value: '42370', value_type: :value}
+            }
+          }
           iex> mda[0][0]
           "string one"
           iex> mda[0][2]
@@ -389,13 +412,13 @@ defmodule Xlsxir do
 
           iex> {:ok, tid} = Xlsxir.extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_cell(tid, "A1")
-          "string one"
+          %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value}
           iex> Xlsxir.close(tid)
           :ok
 
           iex> {:ok, tid} = Xlsxir.multi_extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_cell(tid, "A1")
-          "string one"
+          %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value}
           iex> Xlsxir.close(tid)
           :ok
   """
@@ -430,7 +453,13 @@ defmodule Xlsxir do
 
           iex> {:ok, tid} = Xlsxir.extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_row(tid, 1)
-          ["string one", "string two", 10, 20, {2016, 1, 1}]
+          [
+            %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value},
+            %{cell_value: "string two", data_type: 's', formula: nil, num_style: nil, value: '2', value_type: :value},
+            %{cell_value: 10, data_type: nil, formula: nil, num_style: nil, value: '10', value_type: :value},
+            %{cell_value: 20, data_type: nil, formula: '4*5', num_style: nil, value: '20', value_type: :value},
+            %{cell_value: {2016, 1, 1}, data_type: nil, formula: nil, num_style: 'd', value: '42370', value_type: :value}
+          ]
           iex> Xlsxir.close(tid)
           :ok
 
@@ -464,13 +493,13 @@ defmodule Xlsxir do
 
           iex> {:ok, tid} = Xlsxir.extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_col(tid, "A")
-          ["string one"]
+          [%{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value}]
           iex> Xlsxir.close(tid)
           :ok
 
           iex> {:ok, tid} = Xlsxir.multi_extract("./test/test_data/test.xlsx", 0)
           iex> Xlsxir.get_col(tid, "A")
-          ["string one"]
+          [%{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value}]
           iex> Xlsxir.close(tid)
           :ok
   """
@@ -566,7 +595,18 @@ defmodule Xlsxir do
       iex> Xlsxir.set_empty_cells_to_fill_rows(tid)
       {:ok, tid}
       iex> Xlsxir.get_row(tid, 1)
-      [1, nil, 1, nil, 1, nil, nil, 1, nil, nil]
+      [
+        %{cell_value: 1, data_type: nil, formula: 'IF(Sheet10!A1<>"",Sheet10!A1,"")', num_style: nil, value: '1', value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!B1<>"",Sheet10!B1,"")', num_style: nil, value: "", value_type: :value},
+        %{cell_value: 1, data_type: nil, formula: 'IF(Sheet10!C1<>"",Sheet10!C1,"")', num_style: nil, value: '1', value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!D1<>"",Sheet10!D1,"")', num_style: nil, value: "", value_type: :value},
+        %{cell_value: 1, data_type: nil, formula: 'IF(Sheet10!E1<>"",Sheet10!E1,"")', num_style: nil, value: '1', value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!F1<>"",Sheet10!F1,"")', num_style: nil, value: "", value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!G1<>"",Sheet10!G1,"")', num_style: nil, value: "", value_type: :value},
+        %{cell_value: 1, data_type: nil, formula: 'IF(Sheet10!H1<>"",Sheet10!H1,"")', num_style: nil, value: '1', value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!I1<>"",Sheet10!I1,"")', num_style: nil, value: "", value_type: :value},
+        %{cell_value: nil, data_type: 'str', formula: 'IF(Sheet10!J1<>"",Sheet10!J1,"")', num_style: nil, value: "", value_type: :value}
+      ]
       iex> Xlsxir.get_col(tid, "J")
       [nil, nil, 1, nil]
   """

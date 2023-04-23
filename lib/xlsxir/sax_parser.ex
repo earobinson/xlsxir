@@ -49,7 +49,18 @@ defmodule Xlsxir.SaxParser do
           [{1, "Sheet1"}]
           iex> {:ok, %Xlsxir.ParseWorksheet{tid: tid4}, _} = Xlsxir.SaxParser.parse(%Xlsxir.XmlFile{name: "sheet1.xml", content: File.read!("./test/test_data/test/xl/worksheets/sheet1.xml")}, :worksheet, %Xlsxir.XlsxFile{shared_strings: tid2, styles: tid1, workbook: tid3})
           iex> :ets.lookup(tid4, 1)
-          [{1, [["A1", "string one"], ["B1", "string two"], ["C1", 10], ["D1", 20], ["E1", {2016, 1, 1}]]}]
+          [
+            {
+              1,
+              [
+                ["A1", %{cell_value: "string one", data_type: 's', formula: nil, num_style: nil, value: '0', value_type: :value}],
+                ["B1", %{cell_value: "string two", data_type: 's', formula: nil, num_style: nil, value: '1', value_type: :value}],
+                ["C1", %{cell_value: 10, data_type: nil, formula: nil, num_style: nil, value: '10', value_type: :value}],
+                ["D1", %{cell_value: 20, data_type: nil, formula: '4*5', num_style: nil, value: '20', value_type: :value}],
+                ["E1", %{cell_value: {2016, 1, 1}, data_type: nil, formula: nil, num_style: 'd', value: '42370', value_type: :value}]
+              ]
+            }
+          ]
   """
   def parse(%XmlFile{} = xml_file, type, excel \\ nil) do
     {:ok, file_pid} = XmlFile.open(xml_file)

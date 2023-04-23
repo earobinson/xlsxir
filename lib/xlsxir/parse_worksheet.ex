@@ -12,6 +12,7 @@ defmodule Xlsxir.ParseWorksheet do
             data_type: "",
             num_style: "",
             value: "",
+            formula: nil,
             value_type: nil,
             max_rows: nil,
             tid: nil
@@ -88,7 +89,7 @@ defmodule Xlsxir.ParseWorksheet do
     %{state | value_type: :value}
   end
 
-  def sax_event_handler({:endElement, _, el, _, _}, state, _, _) when el in ['f', 'v', 't'] do
+  def sax_event_handler({:endElement, _, el, _, _}, state, _, _) when el in ['v', 't', 'f'] do
     %{state | value_type: nil}
   end
 
@@ -99,13 +100,25 @@ defmodule Xlsxir.ParseWorksheet do
     case state do
       nil -> nil
       %{value_type: :value} -> %{state | value: value}
+      %{value_type: :formula} -> %{state | formula: value}
       _ -> state
     end
   end
 
-  def sax_event_handler({:endElement, _, 'c', _}, %__MODULE__{row: row} = state, excel, _) do
+  def sax_event_handler({:endElement, _, 'c', _}, %__MODULE__{row: row} = state, excel, sheet) do
     cell_value = format_cell_value(excel, [state.data_type, state.num_style, state.value])
-    new_cell = [to_string(state.cell_ref), cell_value]
+
+    new_cell = [
+      to_string(state.cell_ref),
+      %{
+        cell_value: cell_value,
+        data_type: state.data_type,
+        num_style: state.num_style,
+        value: state.value,
+        value_type: state.value_type,
+        formula: state.formula
+      }
+    ]
 
     %{
       state
@@ -113,7 +126,8 @@ defmodule Xlsxir.ParseWorksheet do
         cell_ref: "",
         data_type: "",
         num_style: "",
-        value: ""
+        value: "",
+        formula: nil
     }
   end
 
