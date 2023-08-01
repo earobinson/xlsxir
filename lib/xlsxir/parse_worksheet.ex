@@ -8,11 +8,15 @@ defmodule Xlsxir.ParseWorksheet do
   """
 
   defstruct row: [],
+            cells: %{},
             cell_ref: "",
             data_type: "",
             num_style: "",
             value: "",
             formula: nil,
+            formula_si: nil,
+            formula_ref: nil,
+            formula_origin: nil,
             value_type: nil,
             max_rows: nil,
             tid: nil
@@ -57,11 +61,11 @@ defmodule Xlsxir.ParseWorksheet do
 
   def sax_event_handler(
         {:startElement, _, 'row', _, _},
-        %__MODULE__{tid: tid, max_rows: max_rows},
+        %__MODULE__{tid: tid, max_rows: max_rows, cells: cells},
         _excel,
         _
       ) do
-    %__MODULE__{tid: tid, max_rows: max_rows}
+    %__MODULE__{tid: tid, max_rows: max_rows, cells: cells}
   end
 
   def sax_event_handler({:startElement, _, 'c', _, xml_attr}, state, %{styles: styles_tid}, _) do
@@ -81,7 +85,70 @@ defmodule Xlsxir.ParseWorksheet do
     %{state | cell_ref: cell_ref, num_style: num_style, data_type: data_type}
   end
 
-  def sax_event_handler({:startElement, _, 'f', _, _}, state, _, _) do
+  # <c r="D2" s="10" t="b"><f t="shared" ref="D2:D5" si="1">B2=C2</f><v>1</v></c>
+  defp cell_formula(
+         %{shared_strings: _strings_tid} = _excel,
+         state,
+         %{
+           "si" => si,
+           "t" => 'shared',
+           "ref" => ref
+         }
+       ) do
+    %{
+      state
+      | value_type: :formula,
+        formula_ref: ref,
+        formula_si: si
+    }
+  end
+
+  # <c r="D4" s="10" t="str"><f t="shared" si="1"/><v>#VALUE!</v>
+  defp cell_formula(
+         %{shared_strings: _strings_tid} = _excel,
+         state,
+         %{
+           "si" => si,
+           "t" => 'shared'
+         } = attributes
+       )
+       when is_map_key(attributes, "ref") == false do
+    {formula_ref, [_, %{formula: formula}]} =
+      Enum.find(state.cells, fn {_, [_ref, cell]} ->
+        cell.formula_si == si and cell.formula_ref != nil
+      end)
+
+    %{
+      state
+      | value_type: :shared_formula,
+        formula_si: si,
+        formula: formula,
+        formula_origin: formula_ref
+    }
+  end
+
+  # When f has three attributes
+  def sax_event_handler({:startElement, _, 'f', _, [_, _, _] = xml_attr}, state, excel, sheet) do
+    attributes =
+      Enum.reduce(xml_attr, %{}, fn {:attribute, key, _, _, ref}, acc ->
+        Map.put(acc, to_string(key), ref)
+      end)
+
+    cell_formula(excel, state, attributes)
+  end
+
+  # When f has two attributes
+  def sax_event_handler({:startElement, _, 'f', _, [_, _] = xml_attr}, state, excel, sheet) do
+    attributes =
+      Enum.reduce(xml_attr, %{}, fn {:attribute, key, _, _, ref}, acc ->
+        Map.put(acc, to_string(key), ref)
+      end)
+
+    cell_formula(excel, state, attributes)
+  end
+
+  # When f has a value
+  def sax_event_handler({:startElement, _, 'f', _, []}, state, _, _) do
     %{state | value_type: :formula}
   end
 
@@ -96,17 +163,44 @@ defmodule Xlsxir.ParseWorksheet do
   def sax_event_handler({:startElement, _, 'is', _, _}, state, _, _),
     do: %{state | value_type: :value}
 
-  def sax_event_handler({:characters, value}, state, _, _) do
-    case state do
-      nil -> nil
-      %{value_type: :value} -> %{state | value: value}
-      %{value_type: :formula} -> %{state | formula: value}
-      _ -> state
-    end
+  # def sax_event_handler({:characters, value}, state, _, _) do
+  #   case state do
+  #     nil -> nil
+  #     %{value_type: :value} -> %{state | value: value}
+  #     %{value_type: :formula} -> %{state | formula: value}
+  #     _ -> state
+  #   end
+  # end
+
+  def sax_event_handler({:characters, value}, nil, _, _) do
+    nil
+  end
+
+  def sax_event_handler({:characters, value}, %{value_type: :value} = state, _, _) do
+    %{state | value: value}
+  end
+
+  def sax_event_handler({:characters, value}, %{value_type: :formula} = state, _, _) do
+    %{state | formula: value}
   end
 
   def sax_event_handler({:endElement, _, 'c', _}, %__MODULE__{row: row} = state, excel, sheet) do
     cell_value = format_cell_value(excel, [state.data_type, state.num_style, state.value])
+
+    # if cell_value == "#VALUE!" do
+    #   IO.inspect(%{
+    #     # state: state,
+    #     data_type: state.data_type,
+    #     value_type: state.value_type,
+    #     my_cell_value: cell_value,
+    #     cell_formula: state.formula,
+    #     formula_si: state.formula_si,
+    #     formula_ref: state.formula_ref,
+    #     formula_origin: state.formula_origin,
+    #     cell_ref: state.cell_ref
+    #     # excel: excel
+    #   })
+    # end
 
     new_cell = [
       to_string(state.cell_ref),
@@ -116,24 +210,31 @@ defmodule Xlsxir.ParseWorksheet do
         num_style: state.num_style,
         value: state.value,
         value_type: state.value_type,
-        formula: state.formula
+        formula: state.formula,
+        formula_si: state.formula_si,
+        formula_ref: state.formula_ref,
+        formula_origin: state.formula_origin
       }
     ]
 
     %{
       state
       | row: [new_cell | row],
+        cells: Map.put(state.cells, state.cell_ref, new_cell),
         cell_ref: "",
         data_type: "",
         num_style: "",
         value: "",
-        formula: nil
+        formula: nil,
+        formula_si: nil,
+        formula_ref: nil,
+        formula_origin: nil
     }
   end
 
   def sax_event_handler(
         {:endElement, _, 'row', _},
-        %__MODULE__{tid: tid, max_rows: max_rows} = state,
+        %__MODULE__{tid: tid, max_rows: max_rows, cells: cells} = state,
         _excel,
         _
       ) do
