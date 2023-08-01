@@ -188,19 +188,18 @@ defmodule Xlsxir.ParseWorksheet do
     cell_value = format_cell_value(excel, [state.data_type, state.num_style, state.value])
 
     # if cell_value == "#VALUE!" do
-    IO.inspect(%{
-      # state: state,
-      data_type: state.data_type,
-      value_type: state.value_type,
-      my_cell_value: cell_value,
-      cell_formula: state.formula,
-      formula_si: state.formula_si,
-      formula_ref: state.formula_ref,
-      formula_origin: state.formula_origin,
-      cell_ref: state.cell_ref
-      # excel: excel
-    })
-
+    #   IO.inspect(%{
+    #     # state: state,
+    #     data_type: state.data_type,
+    #     value_type: state.value_type,
+    #     my_cell_value: cell_value,
+    #     cell_formula: state.formula,
+    #     formula_si: state.formula_si,
+    #     formula_ref: state.formula_ref,
+    #     formula_origin: state.formula_origin,
+    #     cell_ref: state.cell_ref
+    #     # excel: excel
+    #   })
     # end
 
     new_cell = [
