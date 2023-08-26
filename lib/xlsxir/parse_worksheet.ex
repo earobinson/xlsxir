@@ -85,6 +85,22 @@ defmodule Xlsxir.ParseWorksheet do
     %{state | cell_ref: cell_ref, num_style: num_style, data_type: data_type}
   end
 
+  # <c r=\"B2\" s=\"9\" t=\"str\"><f t=\"array\" ref=\"B2\">XLOOKUP(2,G2:G1001,M2:M1001)</f><v>B</v></c>
+  defp cell_formula(
+         %{shared_strings: _strings_tid} = _excel,
+         state,
+         %{
+           "t" => 'array',
+           "ref" => ref
+         }
+       ) do
+    %{
+      state
+      | value_type: :formula,
+        formula_ref: ref
+    }
+  end
+
   # <c r="D2" s="10" t="b"><f t="shared" ref="D2:D5" si="1">B2=C2</f><v>1</v></c>
   defp cell_formula(
          %{shared_strings: _strings_tid} = _excel,
@@ -186,21 +202,6 @@ defmodule Xlsxir.ParseWorksheet do
 
   def sax_event_handler({:endElement, _, 'c', _}, %__MODULE__{row: row} = state, excel, sheet) do
     cell_value = format_cell_value(excel, [state.data_type, state.num_style, state.value])
-
-    # if cell_value == "#VALUE!" do
-    #   IO.inspect(%{
-    #     # state: state,
-    #     data_type: state.data_type,
-    #     value_type: state.value_type,
-    #     my_cell_value: cell_value,
-    #     cell_formula: state.formula,
-    #     formula_si: state.formula_si,
-    #     formula_ref: state.formula_ref,
-    #     formula_origin: state.formula_origin,
-    #     cell_ref: state.cell_ref
-    #     # excel: excel
-    #   })
-    # end
 
     new_cell = [
       to_string(state.cell_ref),
